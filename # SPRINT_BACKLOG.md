@@ -60,5 +60,9 @@
 \- \[x] Cancelación solo dueño, resolución dueño o autoridad.  
 \- \[x] Alertas resueltas/canceladas se eliminan del feed en vivo.
 
-\#\#\# Sprint 7: QA y Refinamiento  
-\- \[ \] Manejo exhaustivo de errores, refinamiento UX y QA global.  
+\#\#\# ✅ Sprint 7: QA y Refinamiento (COMPLETADO)  
+\- \[x] Validación de email, password y nombre en RegistroRequest.  
+\- \[x] Validación de coordenadas en UbicacionUpdate.  
+\- \[x] Validación de especie en MascotaRequest.  
+\- \[x] Response models tipados para resolver/cancelar (ResolveAlertResponse).  
+\- \[x] Global exception handler que siempre devuelve JSON.  
