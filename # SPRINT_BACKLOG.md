@@ -49,9 +49,10 @@
 \- \[x] Selector de mascota registrada del usuario  
 \- \[x] Mostrar alertas activas en el mapa desde el backend
 
-\#\#\# Sprint 5: Dashboard Web (Next.js)  
-\- \[ \] Panel de autoridades con acceso restringido.  
-\- \[ \] Integración de WebSockets (\`/ws/alertas\`) para actualizaciones en vivo.
+\#\#\# ✅ Sprint 5: Dashboard Web (Next.js) (COMPLETADO)  
+\- \[x] Panel de autoridades con login JWT separado (tabla autoridades).  
+\- \[x] Integración de WebSockets (\`/ws/alertas\`) para actualizaciones en vivo.  
+\- \[x] Dashboard con feed de alertas en tiempo real + reconexión automática.
 
 \#\#\# Sprint 6: Flujo de Resolución  
 \- \[ \] Endpoints de hallazgo y cancelación (\`PUT /alertas/{id}/resolver\`).  
