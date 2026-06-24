@@ -1,4 +1,7 @@
+from datetime import datetime, timezone
+
 from geoalchemy2 import WKTElement
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -112,7 +115,7 @@ async def listar_alertas_activas_service(
             func.ST_Y(Alerta.ubicacion).label("lat"),
         )
         .join(Mascota, Alerta.mascota_id == Mascota.id)
-        .where(Alerta.estado != "RESUELTA")
+        .where(Alerta.estado.notin_(["RESUELTA", "CANCELADA"]))
         .order_by(Alerta.created_at.desc())
     )
 
@@ -134,3 +137,97 @@ async def listar_alertas_activas_service(
         }
         for row in rows
     ]
+
+
+async def resolver_alerta(
+    db: AsyncSession,
+    alerta_id: int,
+    usuario_id: int,
+    es_autoridad: bool = False,
+) -> dict:
+    """Marca una alerta como resuelta.
+
+    Solo el dueño de la alerta o una autoridad puede resolverla.
+    """
+    result = await db.execute(select(Alerta).where(Alerta.id == alerta_id))
+    alerta = result.scalar_one_or_none()
+
+    if alerta is None:
+        raise AlertaError("Alerta no encontrada", status_code=404)
+
+    if alerta.usuario_id != usuario_id and not es_autoridad:
+        raise AlertaError(
+            "No tenés permiso para resolver esta alerta", status_code=403
+        )
+
+    if alerta.estado == "RESUELTA":
+        raise AlertaError("La alerta ya está resuelta", status_code=400)
+
+    ahora = datetime.now(timezone.utc)
+    alerta.estado = "RESUELTA"
+    alerta.resuelta_en = ahora
+    await db.commit()
+    await db.refresh(alerta)
+
+    from app.services.websocket_manager import manager
+
+    await manager.broadcast(
+        {
+            "type": "alerta_resuelta",
+            "alerta_id": alerta.id,
+        }
+    )
+
+    return {
+        "alerta_id": alerta.id,
+        "estado": alerta.estado,
+        "resuelta_en": str(alerta.resuelta_en),
+    }
+
+
+async def cancelar_alerta(
+    db: AsyncSession,
+    alerta_id: int,
+    usuario_id: int,
+) -> dict:
+    """Cancela una alerta (solo el dueño).
+
+    A diferencia de resolver, cancelar implica que la mascota
+    nunca estuvo perdida o se encontró antes de activar la alerta.
+    """
+    result = await db.execute(select(Alerta).where(Alerta.id == alerta_id))
+    alerta = result.scalar_one_or_none()
+
+    if alerta is None:
+        raise AlertaError("Alerta no encontrada", status_code=404)
+
+    if alerta.usuario_id != usuario_id:
+        raise AlertaError(
+            "Solo el dueño de la alerta puede cancelarla", status_code=403
+        )
+
+    if alerta.estado in ("RESUELTA", "CANCELADA"):
+        raise AlertaError(
+            f"La alerta ya está {alerta.estado.lower()}", status_code=400
+        )
+
+    ahora = datetime.now(timezone.utc)
+    alerta.estado = "CANCELADA"
+    alerta.resuelta_en = ahora
+    await db.commit()
+    await db.refresh(alerta)
+
+    from app.services.websocket_manager import manager
+
+    await manager.broadcast(
+        {
+            "type": "alerta_cancelada",
+            "alerta_id": alerta.id,
+        }
+    )
+
+    return {
+        "alerta_id": alerta.id,
+        "estado": alerta.estado,
+        "resuelta_en": str(alerta.resuelta_en),
+    }

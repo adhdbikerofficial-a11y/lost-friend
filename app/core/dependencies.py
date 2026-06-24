@@ -70,3 +70,40 @@ async def get_current_authority(
         )
 
     return autoridad
+
+
+async def get_current_actor(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> tuple[int, bool]:
+    """Return (actor_id, is_authority) para endpoints accesibles por usuario o autoridad.
+
+    Decodifica el token y verifica que el sujeto exista en la tabla correspondiente
+    según el campo ``tipo`` del JWT.
+    """
+    payload = decode_access_token(credentials.credentials)
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o expirado",
+        )
+
+    actor_id = int(payload["sub"])
+    is_authority = payload.get("tipo") == "autoridad"
+
+    if is_authority:
+        autoridad = await db.get(Autoridad, actor_id)
+        if not autoridad:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Autoridad no encontrada",
+            )
+    else:
+        usuario = await db.get(Usuario, actor_id)
+        if not usuario:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Usuario no encontrado",
+            )
+
+    return (actor_id, is_authority)
