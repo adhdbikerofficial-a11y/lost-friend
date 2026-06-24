@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password, verify_password
+from app.models.autoridad import Autoridad
 from app.models.usuario import Usuario
 
 
@@ -36,6 +37,28 @@ async def register(
     await db.refresh(usuario)
 
     token = create_access_token({"sub": str(usuario.id)})
+    return {"access_token": token, "token_type": "bearer"}
+
+
+async def login_autoridad(
+    db: AsyncSession,
+    email: str,
+    contrasena: str,
+) -> dict:
+    """Autentica una autoridad por email + contraseña.
+
+    El JWT incluye ``tipo: "autoridad"`` para distinguirlo del token de ciudadano.
+    """
+    result = await db.execute(select(Autoridad).where(Autoridad.email == email))
+    autoridad = result.scalar_one_or_none()
+
+    if not autoridad or not verify_password(contrasena, autoridad.password_hash):
+        raise AuthError("Credenciales inválidas", status_code=401)
+
+    token = create_access_token({
+        "sub": str(autoridad.id),
+        "tipo": "autoridad",
+    })
     return {"access_token": token, "token_type": "bearer"}
 
 

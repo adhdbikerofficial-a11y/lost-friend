@@ -62,6 +62,25 @@ async def crear_alerta(
     # 6. Enqueue notification for 1km radius — inmediata, en Celery worker
     notificar_radio_inicial.apply_async(args=[alerta.id], countdown=0)
 
+    # 7. Broadcast alerta en tiempo real a autoridades conectadas vía WebSocket
+    from app.services.websocket_manager import manager
+
+    await manager.broadcast(
+        {
+            "type": "nueva_alerta",
+            "alerta_id": alerta.id,
+            "mascota_id": mascota.id,
+            "estado": alerta.estado,
+            "radio_actual_km": alerta.radio_actual_km,
+            "lat": datos.ubicacion.lat,
+            "lon": datos.ubicacion.lon,
+            "descripcion": alerta.descripcion,
+            "created_at": str(alerta.created_at),
+            "mascota_nombre": mascota.nombre,
+            "mascota_especie": mascota.especie,
+        }
+    )
+
     return {
         "alerta_id": alerta.id,
         "estado": alerta.estado,
