@@ -45,9 +45,9 @@
 \- \[x] Botón de pánico con especie selector + ubicación real  
 \- \[x] Mapa con círculos de expansión (1km, 5km, 10km) y GPS  
 
-### Pendiente Sprint 4:  
-\- \[ \] Selector de mascota registrada del usuario  
-\- \[ \] Mostrar alertas activas en el mapa desde el backend
+### ✅ Sprint 4 (COMPLETADO)  
+\- \[x] Selector de mascota registrada del usuario  
+\- \[x] Mostrar alertas activas en el mapa desde el backend
 
 \#\#\# Sprint 5: Dashboard Web (Next.js)  
 \- \[ \] Panel de autoridades con acceso restringido.  
