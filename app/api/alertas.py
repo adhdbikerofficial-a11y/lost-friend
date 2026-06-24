@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.dependencies import get_current_actor, get_current_user
 from app.models.usuario import Usuario
-from app.schemas.alerta import AlertaActivaResponse, AlertaRequest, AlertaResponse
+from app.schemas.alerta import (
+    AlertaActivaResponse,
+    AlertaRequest,
+    AlertaResponse,
+    ResolveAlertResponse,
+)
 from app.services.alerta_service import (
     AlertaError,
     cancelar_alerta,
@@ -37,7 +42,7 @@ async def listar_alertas_activas_endpoint(
     return await listar_alertas_activas_service(db=db)
 
 
-@router.put("/{alerta_id}/resolver")
+@router.put("/{alerta_id}/resolver", response_model=ResolveAlertResponse)
 async def resolver_alerta_endpoint(
     alerta_id: int,
     db: AsyncSession = Depends(get_db),
@@ -59,7 +64,7 @@ async def resolver_alerta_endpoint(
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 
 
-@router.put("/{alerta_id}/cancelar")
+@router.put("/{alerta_id}/cancelar", response_model=ResolveAlertResponse)
 async def cancelar_alerta_endpoint(
     alerta_id: int,
     db: AsyncSession = Depends(get_db),

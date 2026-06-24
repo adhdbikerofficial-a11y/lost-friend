@@ -1,7 +1,8 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from app.api.alertas import router as alertas_router
 from app.api.auth import router as auth_router
@@ -25,6 +26,15 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    """Catch-all para errores no manejados — siempre devuelve JSON."""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor"},
+    )
+
 
 app.include_router(auth_router)
 app.include_router(usuarios_router)

@@ -56,3 +56,11 @@ class AlertaActivaResponse(BaseModel):
     mascota_especie: str
 
     model_config = {"from_attributes": True}
+
+
+class ResolveAlertResponse(BaseModel):
+    """Respuesta de resolver o cancelar una alerta."""
+
+    alerta_id: int
+    estado: str
+    resuelta_en: str
