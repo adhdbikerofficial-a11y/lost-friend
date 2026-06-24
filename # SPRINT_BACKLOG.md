@@ -54,9 +54,11 @@
 \- \[x] Integración de WebSockets (\`/ws/alertas\`) para actualizaciones en vivo.  
 \- \[x] Dashboard con feed de alertas en tiempo real + reconexión automática.
 
-\#\#\# Sprint 6: Flujo de Resolución  
-\- \[ \] Endpoints de hallazgo y cancelación (\`PUT /alertas/{id}/resolver\`).  
-\- \[ \] UI para verificación de identidad de la mascota.
+\#\#\# ✅ Sprint 6: Flujo de Resolución (COMPLETADO)  
+\- \[x] Endpoints de hallazgo y cancelación (\`PUT /alertas/{id}/resolver\` + \`PUT /alertas/{id}/cancelar\`).  
+\- \[x] Botón "Resolver" en dashboard autoridades con WebSocket broadcast.  
+\- \[x] Cancelación solo dueño, resolución dueño o autoridad.  
+\- \[x] Alertas resueltas/canceladas se eliminan del feed en vivo.
 
 \#\#\# Sprint 7: QA y Refinamiento  
 \- \[ \] Manejo exhaustivo de errores, refinamiento UX y QA global.  
