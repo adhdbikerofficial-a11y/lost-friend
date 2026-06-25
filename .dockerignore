@@ -1,0 +1,16 @@
+.env
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+python312/
+yay/
+.git/
+.gitignore
+README.md
+# SPRINT_BACKLOG.md
+AGENT.md
+MVP Lost Friend.md
+UI_UX_GUIDELINES.md
+env.example.md
