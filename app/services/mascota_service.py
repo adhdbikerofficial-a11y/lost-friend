@@ -7,6 +7,9 @@ from app.models.mascota import Mascota
 from app.schemas.mascota import MascotaRequest
 
 
+MAX_CODIGO_RETRIES = 10
+
+
 class MascotaError(Exception):
     """Excepción para errores de mascota."""
 
@@ -34,13 +37,18 @@ async def crear_mascota(
         return mascota
 
     # Generate unique codigo_emergencia (6-char hex, uppercase)
-    while True:
+    for _ in range(MAX_CODIGO_RETRIES):
         codigo = secrets.token_hex(3).upper()
         exists = await db.execute(
             select(Mascota).where(Mascota.codigo_emergencia == codigo)
         )
         if exists.scalar_one_or_none() is None:
             break
+    else:
+        raise MascotaError(
+            "No se pudo generar un código de emergencia único",
+            status_code=500,
+        )
 
     mascota = Mascota(
         usuario_id=usuario_id,
