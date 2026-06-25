@@ -6,3 +6,16 @@ __pycache__/
 config/firebase-adminsdk.json
 python312/
 yay/
+
+# Mobile app
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/ios/
+mobile/android/
+mobile/*.jks
+mobile/*.p8
+mobile/*.p12
+mobile/*.key
+mobile/*.mobileprovision
+mobile/.metro-health-check*
