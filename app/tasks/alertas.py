@@ -14,10 +14,13 @@ logger = logging.getLogger(__name__)
 
 
 def _sync_database_url() -> str:
-    """Deriva la URL de BD síncrona desde la URL asíncrona."""
-    return settings.database_url.replace(
-        "postgresql+asyncpg://", "postgresql+psycopg2://"
-    )
+    """Deriva la URL de BD síncrona desde la URL (con o sin driver async)."""
+    url = settings.database_url
+    if "+asyncpg" in url:
+        url = url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    return url
 
 
 # Engine compartido a nivel módulo — se crea una vez por worker

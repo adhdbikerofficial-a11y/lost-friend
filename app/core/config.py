@@ -7,12 +7,12 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 
-    database_url: str
+    database_url: str = ""
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
 
-    secret_key: str
+    secret_key: str = ""
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
     refresh_token_expire_days: int = 30
@@ -27,6 +27,18 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def database_url_async(self) -> str:
+        """Retorna database_url con driver async (postgresql+asyncpg://).
+
+        Railway provee DATABASE_URL como ``postgresql://...``
+        pero SQLAlchemy asíncrono necesita ``postgresql+asyncpg://...``.
+        """
+        url = self.database_url
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
 
 
 settings = Settings()
