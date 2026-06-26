@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     alert_expand_10km_minutes: int = 30
 
     firebase_credentials_path: str = "./config/firebase-adminsdk.json"
+    firebase_credentials_json: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
