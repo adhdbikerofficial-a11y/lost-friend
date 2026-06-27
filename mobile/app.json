@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Lost Friend",
-    "slug": "lost-friend-mobile",
+    "slug": "antony",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -34,6 +34,13 @@
     "plugins": [
       "expo-router",
       "expo-status-bar"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e264193c-18ec-4e5b-9c3d-b950c2d6e699"
+      }
+    },
+    "owner": "tovipis-team"
   }
 }

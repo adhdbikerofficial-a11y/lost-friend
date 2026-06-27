@@ -1,0 +1,14 @@
+# EAS Build ignore file — excluye archivos del tarball de build
+# https://docs.expo.dev/build/easignore/
+
+# Root project artifacts
+../python312/
+../venv/
+../__pycache__/
+../.env
+
+# Git
+../.git/
+
+# OS
+../.DS_Store
