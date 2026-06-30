@@ -1,9 +1,11 @@
 import * as Location from "expo-location";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import MapView, { Circle, Marker } from "react-native-maps";
+import { WebView } from "react-native-webview";
+import type { WebViewMessageEvent } from "react-native-webview";
 import { useAuth } from "../../lib/auth";
 import { API_URL } from "../../lib/api";
+
 const A_CORUÑA = {
   latitude: 43.36,
   longitude: -8.41,
@@ -30,14 +32,179 @@ const MARKER_COLOR: Record<string, string> = {
 };
 
 const getMarkerColor = (especie: string) => MARKER_COLOR[especie] ?? "#6b7280";
+
+// Plantilla HTML con Leaflet + LocationIQ, se inyecta directo en el WebView
+// para evitar problemas de assets en Expo managed workflow.
+const MAP_HTML = String.raw`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <title>Lost Friend Map</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #map { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    (function () {
+      "use strict";
+
+      var map = L.map("map", {
+        center: [43.36, -8.41],
+        zoom: 13,
+        zoomControl: true,
+      });
+
+      L.tileLayer(
+        "https://tiles.locationiq.com/v3/streets/r/{z}/{x}/{y}.png?key=pk.2b9f1548b1946febed928b7d2aa14d20",
+        {
+          attribution:
+            '&copy; <a href="https://www.locationiq.com/">LocationIQ</a>',
+          maxZoom: 18,
+        }
+      ).addTo(map);
+
+      var circles = {};
+      var markers = {};
+
+      function parseRgbaAlpha(color) {
+        if (!color || typeof color !== "string") return null;
+        var match = color.match(
+          /rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/
+        );
+        if (match) return parseFloat(match[4]);
+        return null;
+      }
+
+      function stripAlpha(color) {
+        if (!color || typeof color !== "string") return color || "#3388ff";
+        var match = color.match(
+          /rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*[\d.]+\s*\)/
+        );
+        if (match) return "rgb(" + match[1] + ", " + match[2] + ", " + match[3] + ")";
+        return color;
+      }
+
+      window.addEventListener("message", function (event) {
+        try {
+          var data = JSON.parse(event.data);
+        } catch (e) {
+          return;
+        }
+
+        switch (data.type) {
+          case "setCenter":
+            map.setView([data.lat, data.lng], 13);
+            break;
+
+          case "flyTo":
+            map.flyTo([data.lat, data.lng], 13, { duration: 1 });
+            break;
+
+          case "addCircles":
+            if (data.circles) {
+              data.circles.forEach(function (c) {
+                if (circles[c.id]) {
+                  map.removeLayer(circles[c.id]);
+                }
+                var fillColor = stripAlpha(c.fillColor || c.color || "#3388ff");
+                var alpha = parseRgbaAlpha(c.fillColor || "");
+                var fillOpacity = alpha !== null ? alpha : 0.1;
+                var circle = L.circle([c.lat, c.lng], {
+                  radius: c.radiusKm * 1000,
+                  color: c.strokeColor || c.color || "#3388ff",
+                  fillColor: fillColor,
+                  fillOpacity: fillOpacity,
+                  weight: c.weight || 2,
+                }).addTo(map);
+                circles[c.id] = circle;
+              });
+            }
+            break;
+
+          case "addMarkers":
+            if (data.markers) {
+              data.markers.forEach(function (m) {
+                if (markers[m.id]) {
+                  map.removeLayer(markers[m.id]);
+                }
+                var marker = L.circleMarker([m.lat, m.lng], {
+                  radius: 8,
+                  color: m.color || "#3388ff",
+                  fillColor: m.color || "#3388ff",
+                  fillOpacity: 0.8,
+                  weight: 2,
+                }).addTo(map);
+                if (m.title) {
+                  var popupHtml = "<b>" + m.title + "</b>";
+                  if (m.description) {
+                    popupHtml += "<br/>" + m.description;
+                  }
+                  marker.bindPopup(popupHtml);
+                }
+                markers[m.id] = marker;
+              });
+            }
+            break;
+
+          case "clearCircles":
+            Object.keys(circles).forEach(function (id) {
+              map.removeLayer(circles[id]);
+            });
+            circles = {};
+            break;
+
+          case "clearMarkers":
+            Object.keys(markers).forEach(function (id) {
+              map.removeLayer(markers[id]);
+            });
+            markers = {};
+            break;
+
+          case "clearAll":
+            Object.keys(circles).forEach(function (id) {
+              map.removeLayer(circles[id]);
+            });
+            Object.keys(markers).forEach(function (id) {
+              map.removeLayer(markers[id]);
+            });
+            circles = {};
+            markers = {};
+            break;
+
+          case "setMapZoom":
+            map.setZoom(data.zoom);
+            break;
+        }
+      });
+
+      // Notify React Native that the map is ready
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(
+          JSON.stringify({ type: "mapReady" })
+        );
+      }
+    })();
+  </script>
+</body>
+</html>`;
+
 export default function MapaScreen() {
   const { token } = useAuth();
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [location, setLocation] = useState<Location.LocationObject | null>(
+    null,
+  );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [alertas, setAlertas] = useState<AlertaActiva[]>([]);
   const [alertasLoading, setAlertasLoading] = useState(true);
-  const mapRef = useRef<MapView>(null);
+  const webViewRef = useRef<WebView>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   const fetchAlertas = useCallback(async () => {
     try {
@@ -72,19 +239,93 @@ export default function MapaScreen() {
       });
       setLocation(loc);
       setLoading(false);
-
-      // Animamos el mapa a la ubicación actual
-      mapRef.current?.animateToRegion(
-        {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        },
-        1000
-      );
     })();
   }, []);
+
+  // Envía datos al WebView cuando el mapa está listo y tenemos ubicación/alertas
+  useEffect(() => {
+    if (!mapReady || !webViewRef.current) return;
+
+    const lat = location?.coords.latitude ?? A_CORUÑA.latitude;
+    const lng = location?.coords.longitude ?? A_CORUÑA.longitude;
+
+    // Volar a la ubicación del usuario
+    webViewRef.current.postMessage(
+      JSON.stringify({ type: "flyTo", lat, lng }),
+    );
+
+    // Limpiar capas previas
+    webViewRef.current.postMessage(JSON.stringify({ type: "clearAll" }));
+
+    // Círculos de expansión centrados en el usuario
+    const expansionCircles = [
+      {
+        id: "user-1km",
+        lat,
+        lng,
+        radiusKm: 1,
+        color: "#dc2626",
+        fillColor: "rgba(220, 38, 38, 0.1)",
+      },
+      {
+        id: "user-5km",
+        lat,
+        lng,
+        radiusKm: 5,
+        color: "#eab308",
+        fillColor: "rgba(234, 179, 8, 0.05)",
+      },
+      {
+        id: "user-10km",
+        lat,
+        lng,
+        radiusKm: 10,
+        color: "#3b82f6",
+        fillColor: "rgba(59, 130, 246, 0.03)",
+      },
+    ];
+    webViewRef.current.postMessage(
+      JSON.stringify({ type: "addCircles", circles: expansionCircles }),
+    );
+
+    // Marcadores y círculos de alertas activas
+    if (alertas.length > 0) {
+      const markers = alertas.map((a) => ({
+        id: `m-${a.alerta_id}`,
+        lat: a.lat,
+        lng: a.lon,
+        title: `${a.mascota_nombre} — ${a.mascota_especie}`,
+        description: `${a.estado} · radio ${a.radio_actual_km}km`,
+        color: getMarkerColor(a.mascota_especie),
+      }));
+      const alertCircles = alertas.map((a) => ({
+        id: `c-${a.alerta_id}`,
+        lat: a.lat,
+        lng: a.lon,
+        radiusKm: a.radio_actual_km,
+        color: "#8b5cf6",
+        fillColor: "rgba(139, 92, 246, 0.06)",
+      }));
+
+      webViewRef.current.postMessage(
+        JSON.stringify({ type: "addMarkers", markers }),
+      );
+      webViewRef.current.postMessage(
+        JSON.stringify({ type: "addCircles", circles: alertCircles }),
+      );
+    }
+  }, [mapReady, location, alertas]);
+
+  const handleMessage = (event: WebViewMessageEvent) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === "mapReady") {
+        setMapReady(true);
+      }
+    } catch {
+      // ignorar mensajes malformados
+    }
+  };
 
   if (loading) {
     return (
@@ -95,76 +336,17 @@ export default function MapaScreen() {
     );
   }
 
-  const region = location
-    ? {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }
-    : {
-        latitude: A_CORUÑA.latitude,
-        longitude: A_CORUÑA.longitude,
-        latitudeDelta: 0.1,
-        longitudeDelta: 0.1,
-      };
-
-  const center = location
-    ? {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      }
-    : A_CORUÑA;
-
   return (
     <View style={styles.container}>
-      <MapView ref={mapRef} style={styles.map} initialRegion={region}>
-        {/* Círculo 1km */}
-        <Circle
-          center={center}
-          radius={1000}
-          strokeColor="rgba(220, 38, 38, 0.6)"
-          fillColor="rgba(220, 38, 38, 0.1)"
-          strokeWidth={2}
-        />
-        {/* Círculo 5km */}
-        <Circle
-          center={center}
-          radius={5000}
-          strokeColor="rgba(234, 179, 8, 0.5)"
-          fillColor="rgba(234, 179, 8, 0.05)"
-          strokeWidth={2}
-        />
-        {/* Círculo 10km */}
-        <Circle
-          center={center}
-          radius={10000}
-          strokeColor="rgba(59, 130, 246, 0.4)"
-          fillColor="rgba(59, 130, 246, 0.03)"
-          strokeWidth={2}
-        />
-
-        {/* Alertas activas — markers y círculos */}
-        {alertas.map((a) => (
-          <Marker
-            key={`m-${a.alerta_id}`}
-            coordinate={{ latitude: a.lat, longitude: a.lon }}
-            title={`${a.mascota_nombre} — ${a.mascota_especie}`}
-            description={`${a.estado} · radio ${a.radio_actual_km}km`}
-            pinColor={getMarkerColor(a.mascota_especie)}
-          />
-        ))}
-        {alertas.map((a) => (
-          <Circle
-            key={`c-${a.alerta_id}`}
-            center={{ latitude: a.lat, longitude: a.lon }}
-            radius={a.radio_actual_km * 1000}
-            strokeColor="rgba(139, 92, 246, 0.5)"
-            fillColor="rgba(139, 92, 246, 0.06)"
-            strokeWidth={2}
-          />
-        ))}
-      </MapView>
+      <WebView
+        ref={webViewRef}
+        source={{ html: MAP_HTML }}
+        style={styles.map}
+        onMessage={handleMessage}
+        javaScriptEnabled
+        domStorageEnabled
+        originWhitelist={["*"]}
+      />
 
       {errorMsg && (
         <View style={styles.errorBanner}>
