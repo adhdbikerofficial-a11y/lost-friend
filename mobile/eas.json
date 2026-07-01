@@ -11,6 +11,10 @@
     "preview": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_LOCATIONIQ_KEY": "${EXPO_PUBLIC_LOCATIONIQ_KEY}",
+        "EAS_SKIP_AUTO_FINGERPRINT": "1"
       }
     },
     "production": {
