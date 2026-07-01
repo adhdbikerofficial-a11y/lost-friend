@@ -2,6 +2,7 @@ import { router, Tabs } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useAuth } from "../../lib/auth";
+import { colors } from "../../lib/theme";
 
 /**
  * Layout protegido con tabs — redirige a /login si no hay token.
@@ -31,19 +32,19 @@ export default function MainLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: "#1a1a2e" },
-        headerTintColor: "#fff",
+        headerStyle: { backgroundColor: colors.primary },
+        headerTintColor: colors.textWhite,
         headerTitleStyle: { fontWeight: "700" },
         headerRight: () => (
           <Pressable
             onPress={handleLogout}
             style={{ marginRight: 16, paddingHorizontal: 10, paddingVertical: 4 }}
           >
-            <Text style={{ color: "#fff", fontSize: 14 }}>Salir</Text>
+            <Text style={{ color: colors.textWhite, fontSize: 14 }}>Salir</Text>
           </Pressable>
         ),
-        tabBarActiveTintColor: "#1a1a2e",
-        tabBarInactiveTintColor: "#999",
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textLight,
       }}
     >
       <Tabs.Screen

@@ -33,13 +33,17 @@ class ConnectionManager:
         Las conexiones que fallen se remueven automáticamente.
         """
         data = json.dumps(message, default=str)
+        # Snapshot para evitar race condition: connect/disconnect pueden
+        # modificar _connections mientras iteramos (corrutinas concurrentes).
+        connections = list(self._connections)
         dead: set[WebSocket] = set()
-        for ws in self._connections:
+        for ws in connections:
             try:
                 await ws.send_text(data)
             except Exception:
                 dead.add(ws)
-        self._connections -= dead
+        if dead:
+            self._connections -= dead
 
 
 # Singleton global — importado por alerta_service y el endpoint ws

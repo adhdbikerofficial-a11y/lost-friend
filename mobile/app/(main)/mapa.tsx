@@ -5,6 +5,14 @@ import { WebView } from "react-native-webview";
 import type { WebViewMessageEvent } from "react-native-webview";
 import { useAuth } from "../../lib/auth";
 import { API_URL } from "../../lib/api";
+import {
+  borderRadius,
+  colors,
+  fontSize,
+  getMarkerColor,
+  MARKER_COLOR,
+  shadow,
+} from "../../lib/theme";
 
 const A_CORUÑA = {
   latitude: 43.36,
@@ -24,18 +32,10 @@ interface AlertaActiva {
   mascota_especie: string;
 }
 
-const MARKER_COLOR: Record<string, string> = {
-  perro: "#dc2626",
-  gato: "#2563eb",
-  conejo: "#16a34a",
-  ave: "#9333ea",
-};
-
-const getMarkerColor = (especie: string) => MARKER_COLOR[especie] ?? "#6b7280";
-
 // Plantilla HTML con Leaflet + LocationIQ, se inyecta directo en el WebView
 // para evitar problemas de assets en Expo managed workflow.
-const MAP_HTML = String.raw`<!DOCTYPE html>
+// La API key se inyecta como parámetro en vez de estar hardcodeada.
+const getMapHtml = (apiKey: string) => String.raw`<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -61,7 +61,7 @@ const MAP_HTML = String.raw`<!DOCTYPE html>
       });
 
       L.tileLayer(
-        "https://tiles.locationiq.com/v3/streets/r/{z}/{x}/{y}.png?key=pk.2b9f1548b1946febed928b7d2aa14d20",
+        "https://tiles.locationiq.com/v3/streets/r/{z}/{x}/{y}.png?key=${apiKey}",
         {
           attribution:
             '&copy; <a href="https://www.locationiq.com/">LocationIQ</a>',
@@ -264,7 +264,7 @@ export default function MapaScreen() {
         lat,
         lng,
         radiusKm: 1,
-        color: "#dc2626",
+        color: colors.mapRadius1km,
         fillColor: "rgba(220, 38, 38, 0.1)",
       },
       {
@@ -272,7 +272,7 @@ export default function MapaScreen() {
         lat,
         lng,
         radiusKm: 5,
-        color: "#eab308",
+        color: colors.mapRadius5km,
         fillColor: "rgba(234, 179, 8, 0.05)",
       },
       {
@@ -280,7 +280,7 @@ export default function MapaScreen() {
         lat,
         lng,
         radiusKm: 10,
-        color: "#3b82f6",
+        color: colors.mapRadius10km,
         fillColor: "rgba(59, 130, 246, 0.03)",
       },
     ];
@@ -303,8 +303,8 @@ export default function MapaScreen() {
         lat: a.lat,
         lng: a.lon,
         radiusKm: a.radio_actual_km,
-        color: "#8b5cf6",
-        fillColor: "rgba(139, 92, 246, 0.06)",
+        color: colors.mapAlert,
+        fillColor: colors.mapAlertFill,
       }));
 
       webViewRef.current.postMessage(
@@ -330,7 +330,7 @@ export default function MapaScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#1a1a2e" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Obteniendo ubicación...</Text>
       </View>
     );
@@ -340,7 +340,7 @@ export default function MapaScreen() {
     <View style={styles.container}>
       <WebView
         ref={webViewRef}
-        source={{ html: MAP_HTML }}
+        source={{ html: getMapHtml(process.env.EXPO_PUBLIC_LOCATIONIQ_KEY ?? "") }}
         style={styles.map}
         onMessage={handleMessage}
         javaScriptEnabled
@@ -356,15 +356,15 @@ export default function MapaScreen() {
 
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: "#dc2626" }]} />
+          <View style={[styles.legendDot, { backgroundColor: colors.mapRadius1km }]} />
           <Text style={styles.legendText}>1 km</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: "#eab308" }]} />
+          <View style={[styles.legendDot, { backgroundColor: colors.mapRadius5km }]} />
           <Text style={styles.legendText}>5 km</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: "#3b82f6" }]} />
+          <View style={[styles.legendDot, { backgroundColor: colors.mapRadius10km }]} />
           <Text style={styles.legendText}>10 km</Text>
         </View>
       </View>
@@ -383,39 +383,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#E6F4FE",
+    backgroundColor: colors.bg,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
-    color: "#666",
+    fontSize: fontSize.sm,
+    color: colors.textLight,
   },
   errorBanner: {
     position: "absolute",
     top: 60,
     left: 20,
     right: 20,
-    backgroundColor: "rgba(0,0,0,0.75)",
-    borderRadius: 10,
+    backgroundColor: colors.bgOverlay,
+    borderRadius: borderRadius.md,
     padding: 12,
   },
   errorText: {
-    color: "#fff",
+    color: colors.textWhite,
     textAlign: "center",
-    fontSize: 14,
+    fontSize: fontSize.sm,
   },
   legend: {
     position: "absolute",
     bottom: 100,
     right: 16,
     backgroundColor: "rgba(255,255,255,0.95)",
-    borderRadius: 10,
+    borderRadius: borderRadius.md,
     padding: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    ...shadow.card,
     gap: 8,
   },
   legendItem: {
@@ -429,7 +425,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   legendText: {
-    fontSize: 12,
-    color: "#333",
+    fontSize: fontSize.xs,
+    color: colors.text,
   },
 });

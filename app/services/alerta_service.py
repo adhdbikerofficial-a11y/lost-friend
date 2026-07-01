@@ -4,11 +4,15 @@ from geoalchemy2 import WKTElement
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import logging
+
 from app.core.config import settings
 from app.models.alerta import Alerta
 from app.schemas.alerta import AlertaRequest
 from app.services.mascota_service import crear_mascota
 from app.tasks.alertas import expandir_radio, notificar_radio_inicial
+
+logger = logging.getLogger(__name__)
 
 
 class AlertaError(Exception):
@@ -57,13 +61,29 @@ async def crear_alerta(
     await db.refresh(alerta)
 
     # 5. Enqueue Celery task — AFTER commit, with initial countdown
-    expandir_radio.apply_async(
-        args=[alerta.id],
-        countdown=settings.alert_expand_5km_minutes * 60,
-    )
+    try:
+        expandir_radio.apply_async(
+            args=[alerta.id],
+            countdown=settings.alert_expand_5km_minutes * 60,
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed to schedule expandir_radio for alerta %s: %s",
+            alerta.id,
+            exc,
+        )
+        # TODO: background job should retry scheduling for pending alerts
 
     # 6. Enqueue notification for 1km radius — inmediata, en Celery worker
-    notificar_radio_inicial.apply_async(args=[alerta.id], countdown=0)
+    try:
+        notificar_radio_inicial.apply_async(args=[alerta.id], countdown=0)
+    except Exception as exc:
+        logger.error(
+            "Failed to schedule notificar_radio_inicial for alerta %s: %s",
+            alerta.id,
+            exc,
+        )
+        # TODO: background job should retry scheduling for pending alerts
 
     # 7. Broadcast alerta en tiempo real a autoridades conectadas vía WebSocket
     from app.services.websocket_manager import manager

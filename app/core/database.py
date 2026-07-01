@@ -12,6 +12,11 @@ from app.core.config import settings
 engine = create_async_engine(
     settings.database_url_async,
     echo=settings.debug,
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=30,
 )
 
 async_session_factory = async_sessionmaker(

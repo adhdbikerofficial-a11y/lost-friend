@@ -88,7 +88,13 @@ async def get_current_actor(
             detail="Token inválido o expirado",
         )
 
-    actor_id = int(payload["sub"])
+    actor_id_raw = payload.get("sub")
+    if actor_id_raw is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido: no contiene identificador",
+        )
+    actor_id = int(actor_id_raw)
     is_authority = payload.get("tipo") == "autoridad"
 
     if is_authority:

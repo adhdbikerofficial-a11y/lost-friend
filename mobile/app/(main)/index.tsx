@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useAuth } from "../../lib/auth";
 import { API_URL } from "../../lib/api";
+import { colors, fontSize, shadow, spacing } from "../../lib/theme";
 
 const ESPECIES = ["perro", "gato", "conejo", "ave", "otro"] as const;
 
@@ -170,7 +171,7 @@ export default function PanicButtonScreen() {
         {mascotasLoading ? (
           <ActivityIndicator
             size="small"
-            color="#1a1a2e"
+            color={colors.primary}
             style={{ marginBottom: 20 }}
           />
         ) : mascotas.length > 0 ? (
@@ -335,36 +336,19 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 20,
+    color: colors.textLight,
   },
-  // Selector de mascotas
-  petList: {
-    width: "100%",
-    marginBottom: 8,
+  card: {
+    backgroundColor: colors.bgCard,
+    borderRadius: 10,
+    padding: spacing.lg,
+    marginHorizontal: 20,
+    marginBottom: spacing.lg,
+    ...shadow.card,
   },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#999",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  petChip: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    alignItems: "center",
-    minWidth: 90,
-    borderWidth: 2,
-    borderColor: "#eee",
-  },
-  petChipActive: {
-    borderColor: "#1a1a2e",
+  input: {
+    borderWidth: 1,
+    borderColor: colors.primary,
     backgroundColor: "#f0f4ff",
   },
   petChipEmoji: {
@@ -451,24 +435,22 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f0f0f0",
   },
   dropdownItemActive: {
-    backgroundColor: "#E6F4FE",
+    backgroundColor: colors.bg,
   },
-  dropdownItemText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  dropdownItemTextActive: {
-    color: "#1a1a2e",
+  title: {
+    fontSize: fontSize.xxl,
+    fontWeight: "bold",
+    color: colors.primary,
     fontWeight: "600",
   },
   panicButton: {
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: "#dc2626",
+    backgroundColor: colors.error,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#dc2626",
+    shadowColor: colors.error,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
